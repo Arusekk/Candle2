@@ -14,11 +14,7 @@
 
 #define ZOOMSTEP 1.1
 
-#ifdef GLES
 GLWidget::GLWidget(QWidget *parent) : QOpenGLWidget(parent), m_shaderProgram(0)
-#else
-GLWidget::GLWidget(QWidget *parent) : QGLWidget(parent), m_shaderProgram(0)
-#endif
 
 {
     m_animateView = false;
@@ -355,10 +351,8 @@ void GLWidget::setSpendTime(const QTime &spendTime)
 
 void GLWidget::initializeGL()
 {
-#ifndef GLES
     // Initialize functions
     initializeOpenGLFunctions();
-#endif
 
     // Create shader program
     m_shaderProgram = new QOpenGLShaderProgram();
@@ -412,12 +406,7 @@ void GLWidget::updateView()
     m_viewMatrix.rotate(-90, 1.0, 0.0, 0.0);
 }
 
-#ifdef GLES
 void GLWidget::paintGL() {
-#else
-void GLWidget::paintEvent(QPaintEvent *pe) {
-    Q_UNUSED(pe)
-#endif
     QPainter painter(this);
 
     // Segment counter
@@ -505,9 +494,7 @@ void GLWidget::paintEvent(QPaintEvent *pe) {
 
     m_frames++;
 
-#ifdef GLES
     update();
-#endif
 }
 
 void GLWidget::mousePressEvent(QMouseEvent *event)
@@ -567,15 +554,9 @@ void GLWidget::timerEvent(QTimerEvent *te)
 {
     if (te->timerId() == m_timerPaint.timerId()) {
         if (m_animateView) viewAnimation();
-#ifndef GLES
         if (m_updatesEnabled) update();
-#endif
     } else {
-#ifdef GLES
         QOpenGLWidget::timerEvent(te);
-#else
-        QGLWidget::timerEvent(te);
-#endif
     }
 }
 

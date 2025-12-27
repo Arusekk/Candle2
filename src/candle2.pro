@@ -5,6 +5,7 @@
 #-------------------------------------------------
 
 QT       = core gui opengl serialport widgets network
+QT += openglwidgets
 
 win32: {
     QT += winextras
