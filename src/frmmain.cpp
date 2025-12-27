@@ -192,7 +192,7 @@ frmMain::frmMain(QWidget *parent) :
 
     connect(ui->cboCommand, SIGNAL(returnPressed()), this, SLOT(onCboCommandReturnPressed()));
 
-    foreach (StyledToolButton* button, this->findChildren<StyledToolButton*>(QRegExp("cmdUser\\d")))
+    foreach (StyledToolButton* button, this->findChildren<StyledToolButton*>(QRegularExpression("cmdUser\\d")))
     {
         connect(button, SIGNAL(clicked(bool)), this, SLOT(onCmdUserClicked(bool)));
     }
@@ -291,7 +291,7 @@ frmMain::frmMain(QWidget *parent) :
     updateControlsState();
 
     // Prepare jog buttons
-    foreach (StyledToolButton* button, ui->grpJog->findChildren<StyledToolButton*>(QRegExp("cmdJogFeed\\d")))
+    foreach (StyledToolButton* button, ui->grpJog->findChildren<StyledToolButton*>(QRegularExpression("cmdJogFeed\\d")))
     {
         connect(button, SIGNAL(clicked(bool)), this, SLOT(onCmdJogFeedClicked()));
     }
@@ -492,7 +492,7 @@ void frmMain::preloadSettings()
     QSettings set(m_settingsFilePath, QSettings::IniFormat);
     set.setIniCodec("UTF-8");
 
-    qApp->setStyleSheet(QString(qApp->styleSheet()).replace(QRegExp("font-size:\\s*\\d+"), "font-size: " + set.value("fontSize", "8").toString()));
+    qApp->setStyleSheet(QString(qApp->styleSheet()).replace(QRegularExpression("font-size:\\s*\\d+"), "font-size: " + set.value("fontSize", "8").toString()));
 
     // Update v-sync in glformat
     QSurfaceFormat fmt = QSurfaceFormat::defaultFormat();
@@ -805,10 +805,11 @@ void frmMain::onSendSerial()
                 mCommandsWait.pop_front();
 
                 // Processing spindle speed only from g-code program
-                /*QRegExp s("[Ss]0*(\\d+)");
-                if (s.indexIn(command) != -1 && ca.tableIndex > -2)
+                /*QRegularExpression s("[Ss]0*(\\d+)");
+                QRegularExpressionMatch match = s.match(command);
+                if (match.hasMatch() && ca.tableIndex > -2)
                 {
-                    int speed = s.cap(1).toInt();
+                    int speed = match.captured(1).toInt();
                     if (ui->slbSpindle->value() != speed)
                     {
                         ui->slbSpindle->setValue(speed);
@@ -818,7 +819,7 @@ void frmMain::onSendSerial()
                 //qDebug() << "Send: " + command;
 
                 // Set M2 & M30 commands sent flag
-                if (command.contains(QRegExp("M0*2|M30")))
+                if (command.contains(QRegularExpression("M0*2|M30")))
                 {
                     m_fileEndSent = true;
                 }
@@ -1164,7 +1165,7 @@ void frmMain::on_cmdFileAbort_clicked()
 
 void frmMain::storeParserState()
 {    
-    m_storedParserStatus = ui->glwVisualizer->parserStatus().remove(QRegExp("GC:|\\[|\\]|G[01234]\\s|M[0345]+\\s|\\sF[\\d\\.]+|\\sS[\\d\\.]+"));
+    m_storedParserStatus = ui->glwVisualizer->parserStatus().remove(QRegularExpression("GC:|\\[|\\]|G[01234]\\s|M[0345]+\\s|\\sF[\\d\\.]+|\\sS[\\d\\.]+"));
 }
 
 void frmMain::restoreParserState()
@@ -1199,7 +1200,7 @@ void frmMain::sendNextFileCommands()
 
     QString command = FeedOverride(m_currentModel->data(m_currentModel->index(m_fileCommandIndex, 1)).toString());
 
-    while (m_fileCommandIndex < m_currentModel->rowCount() - 1 && !(!m_CommandAttributesList.isEmpty() && m_CommandAttributesList.last().command.contains(QRegExp("M0*2|M30"))))
+    while (m_fileCommandIndex < m_currentModel->rowCount() - 1 && !(!m_CommandAttributesList.isEmpty() && m_CommandAttributesList.last().command.contains(QRegularExpression("M0*2|M30"))))
     {
         //m_currentModel->setData(m_currentModel->index(m_fileCommandIndex, 2), GCodeItem::Sent);
         sendCommand(command, m_fileCommandIndex, m_settings->showProgramCommands());
@@ -1810,7 +1811,7 @@ bool frmMain::DataIsReset(QString data)
     // This matches e.g.
     // Grbl 1.1h ['$' for help]
     // GrblHAL 1.1f ['$' or '' for help]
-    return QRegExp("^GRBL[^ ]*\\s\\d\\.\\d").indexIn(data.toUpper()) != -1;
+    return QRegularExpression("^GRBL[^ ]*\\s\\d\\.\\d").match(data.toUpper()).hasMatch();
 }
 
 QString frmMain::FeedOverride(QString command)

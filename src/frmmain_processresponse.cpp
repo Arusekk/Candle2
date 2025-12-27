@@ -62,7 +62,7 @@ void frmMain::ProcessGRBL1_1()
             m_statusReceived = true;
 
             // Update machine coordinates
-            static QRegExp mpx;
+            static QRegularExpression mpx;
             if(!m_settings->UseRotaryAxis())
             {
                 mpx.setPattern("MPos:([^,]*),([^,]*),([^,^>^|]*)");
@@ -72,25 +72,28 @@ void frmMain::ProcessGRBL1_1()
                 mpx.setPattern("MPos:([^,]*),([^,]*),([^,]*),([^,]*),([^,^>^|]*)");
             }
 
-            if(mpx.indexIn(data) != -1)
+            QRegularExpressionMatch match = mpx.match(data);
+            if(match.hasMatch())
             {
-                ui->txtMPosX->setText(mpx.cap(1));
-                ui->txtMPosY->setText(mpx.cap(2));
-                ui->txtMPosZ->setText(mpx.cap(3));
+                ui->txtMPosX->setText(match.captured(1));
+                ui->txtMPosY->setText(match.captured(2));
+                ui->txtMPosZ->setText(match.captured(3));
             }
             if(m_settings->UseRotaryAxis())
             {
                 // Set A & B
-                //qDebug() << "A: " << mpx.cap(4);
-                ui->txtMPosA->setText(mpx.cap(4));
-                ui->txtMPosB->setText(mpx.cap(5));
+                //qDebug() << "A: " << match.captured(4);
+                ui->txtMPosA->setText(match.captured(4));
+                ui->txtMPosB->setText(match.captured(5));
             }
 
             // Status
-            static QRegExp stx("<([^,^>^|]*)");
-            if (stx.indexIn(data) != -1)
+            static const QRegularExpression stx("<([^,^>^|]*)");
+
+            match = stx.match(data);
+            if (match.hasMatch())
             {
-                status = m_status.indexOf(stx.cap(1));
+                status = m_status.indexOf(match.captured(1));
 
                 // Undetermined status
                 if (status == -1) status = 0;
@@ -218,7 +221,7 @@ void frmMain::ProcessGRBL1_1()
             // Store work offset
             static QVector3D workOffset;
             static double workOffsetAB[2] = {0.0};
-            static QRegExp wpx;
+            static QRegularExpression wpx;
 
             if(!m_settings->UseRotaryAxis())
             {
@@ -229,15 +232,16 @@ void frmMain::ProcessGRBL1_1()
                 wpx.setPattern("WCO:([^,]*),([^,]*),([^,]*),([^,]*),([^,^>^|]*)");
             }
 
-            if(wpx.indexIn(data) != -1)
+            match = wpx.match(data);
+            if(match.hasMatch())
             {
-                workOffset = QVector3D(wpx.cap(1).toDouble(), wpx.cap(2).toDouble(), wpx.cap(3).toDouble());
+                workOffset = QVector3D(match.captured(1).toDouble(), match.captured(2).toDouble(), match.captured(3).toDouble());
 
                 // Store offsets for rotary axis
                 if(m_settings->UseRotaryAxis())
                 {
-                    workOffsetAB[0] = wpx.cap(4).toDouble();
-                    workOffsetAB[1] = wpx.cap(5).toDouble();
+                    workOffsetAB[0] = match.captured(4).toDouble();
+                    workOffsetAB[1] = match.captured(5).toDouble();
                 }
             }
 
@@ -304,13 +308,14 @@ void frmMain::ProcessGRBL1_1()
             }
 
             // Get overridings
-            static QRegExp ov("Ov:([^,]*),([^,]*),([^,^>^|]*)");
-            if(ov.indexIn(data) != -1)
+            static const QRegularExpression ov("Ov:([^,]*),([^,]*),([^,^>^|]*)");
+            match = ov.match(data);
+            if(match.hasMatch())
             {
-                UpdateOverride(ui->slbFeedOverride, ov.cap(1).toInt(), 0x91);
-                UpdateOverride(ui->slbSpindleOverride, ov.cap(3).toInt(), 0x9a);
+                UpdateOverride(ui->slbFeedOverride, match.captured(1).toInt(), 0x91);
+                UpdateOverride(ui->slbSpindleOverride, match.captured(3).toInt(), 0x9a);
 
-                int rapid = ov.cap(2).toInt();
+                int rapid = match.captured(2).toInt();
                 ui->slbRapidOverride->setCurrentValue(rapid);
 
                 int target = ui->slbRapidOverride->isChecked() ? ui->slbRapidOverride->value() : 100;
@@ -365,17 +370,19 @@ void frmMain::ProcessGRBL1_1()
 
                 // Update pins state
                 QString pinState;
-                static QRegExp pn("Pn:([^|^>]*)");
-                if(pn.indexIn(data) != -1)
+                static const QRegularExpression pn("Pn:([^|^>]*)");
+                match = pn.match(data);
+                if(match.hasMatch())
                 {
-                    pinState.append(QString(tr("PS: %1")).arg(pn.cap(1)));
+                    pinState.append(QString(tr("PS: %1")).arg(match.captured(1)));
                 }
 
                 // Process spindle state
-                static QRegExp as("A:([^,^>^|]+)");
-                if(as.indexIn(data) != -1)
+                static const QRegularExpression as("A:([^,^>^|]+)");
+                match = as.match(data);
+                if(match.hasMatch())
                 {
-                    QString state = as.cap(1);
+                    QString state = match.captured(1);
                     m_spindleCW = state.contains("S");
 
                     if(state.contains("S") || state.contains("C"))
@@ -394,7 +401,7 @@ void frmMain::ProcessGRBL1_1()
                         pinState.append(" / ");
                     }
 
-                    pinState.append(QString(tr("AS: %1")).arg(as.cap(1)));
+                    pinState.append(QString(tr("AS: %1")).arg(match.captured(1)));
                 }
                 else
                 {
@@ -406,10 +413,11 @@ void frmMain::ProcessGRBL1_1()
             }
 
             // Get feed/spindle values
-            static QRegExp fs("FS:([^,]*),([^,^|^>]*)");
-            if(fs.indexIn(data) != -1)
+            static const QRegularExpression fs("FS:([^,]*),([^,^|^>]*)");
+            match = fs.match(data);
+            if(match.hasMatch())
             {
-                ui->glwVisualizer->setSpeedState((QString(tr("F/S: %1 / %2")).arg(fs.cap(1)).arg(fs.cap(2))));
+                ui->glwVisualizer->setSpeedState((QString(tr("F/S: %1 / %2")).arg(match.captured(1)).arg(match.captured(2))));
             }
 
         }
@@ -481,10 +489,11 @@ void frmMain::ProcessGRBL1_1()
                         ui->glwVisualizer->setParserStatus(response.left(response.indexOf("; ")));
 
                         // Spindle speed
-                        QRegExp rx(".*S([\\d\\.]+)");
-                        if(rx.indexIn(response) != -1)
+                        static const QRegularExpression rx(".*S([\\d\\.]+)");
+                        QRegularExpressionMatch match = rx.match(response);
+                        if(match.hasMatch())
                         {
-                            double speed = toMetric(rx.cap(1).toDouble()); //RPM in imperial?
+                            double speed = toMetric(match.captured(1).toDouble()); //RPM in imperial?
                             ui->slbSpindle->setCurrentValue(speed);
                         }
                     }
@@ -505,10 +514,11 @@ void frmMain::ProcessGRBL1_1()
                             storeParserState();
 
                         // Spindle speed
-                        QRegExp rx(".*S([\\d\\.]+)");
-                        if(rx.indexIn(response) != -1)
+                        static const QRegularExpression rx(".*S([\\d\\.]+)");
+                        QRegularExpressionMatch match = rx.match(response);
+                        if(match.hasMatch())
                         {
-                            double speed = toMetric(rx.cap(1).toDouble()); //RPM in imperial?
+                            double speed = toMetric(match.captured(1).toDouble()); //RPM in imperial?
                             ui->slbSpindle->setCurrentValue(speed);
                         }
                         //qDebug() << "Update Parser true";
@@ -519,24 +529,25 @@ void frmMain::ProcessGRBL1_1()
                     if(ca.command == "$#" && ca.tableIndex == -2)
                     {
                         qDebug() << "Received offsets:" << response;
-                        QRegExp rx(".*G92:([^,]*),([^,]*),([^\\]]*)");
+                        static const QRegularExpression rx(".*G92:([^,]*),([^,]*),([^\\]]*)");
 
-                        if(rx.indexIn(response) != -1)
+                        QRegularExpressionMatch match = rx.match(response);
+                        if(match.hasMatch())
                         {
                             if(m_settingZeroX)
                             {
                                 m_settingZeroX = false;
-                                m_storedX = toMetric(rx.cap(1).toDouble());
+                                m_storedX = toMetric(match.captured(1).toDouble());
                             }
                             else if(m_settingZeroXY)
                             {
                                 m_settingZeroXY = false;
-                                m_storedY = toMetric(rx.cap(2).toDouble());
+                                m_storedY = toMetric(match.captured(2).toDouble());
                             }
                             else if(m_settingZeroZ)
                             {
                                 m_settingZeroZ = false;
-                                m_storedZ = toMetric(rx.cap(3).toDouble());
+                                m_storedZ = toMetric(match.captured(3).toDouble());
                             }
 
                             ui->cmdRestoreOrigin->setToolTip(QString(tr("Restore origin: %1, %2, %3\n")).arg(m_storedX).arg(m_storedY).arg(m_storedZ));
@@ -569,12 +580,13 @@ void frmMain::ProcessGRBL1_1()
                     {
                         // Get probe Z coordinate
                         // "[PRB:0.000,0.000,0.000:0];ok"
-                        QRegExp rx(".*PRB:([^,]*),([^,]*),([^,:\\]]*)");
+                        static const QRegularExpression rx(".*PRB:([^,]*),([^,]*),([^,:\\]]*)");
                         double z = qQNaN();
-                        if(rx.indexIn(response) != -1)
+                        QRegularExpressionMatch match = rx.match(response);
+                        if(match.hasMatch())
                         {
-                            qDebug() << "probing coordinates:" << rx.cap(1) << rx.cap(2) << rx.cap(3);
-                            z = toMetric(rx.cap(3).toDouble());
+                            qDebug() << "probing coordinates:" << match.captured(1) << match.captured(2) << match.captured(3);
+                            z = toMetric(match.captured(3).toDouble());
                         }
 
                         static double firstZ;
@@ -604,7 +616,7 @@ void frmMain::ProcessGRBL1_1()
                     }
 
                     // Change state query time on check mode on
-                    if(ca.command.contains(QRegExp("$[cC]")))
+                    if(ca.command.contains(QRegularExpression("$[cC]")))
                     {
                         m_timerStateQuery.setInterval(response.contains("Enable") ? 1000 : m_settings->queryStateTime());
                     }
@@ -742,7 +754,7 @@ void frmMain::ProcessGRBL1_1()
                         }
 
                         // Check transfer complete (last row always blank, last command row = rowcount - 2)
-                        if(m_fileProcessedCommandIndex == m_currentModel->rowCount() - 2 || ca.command.contains(QRegExp("M0*2|M30")))
+                        if(m_fileProcessedCommandIndex == m_currentModel->rowCount() - 2 || ca.command.contains(QRegularExpression("M0*2|M30")))
                             m_transferCompleted = true;
                         // Send next program commands
                         else if (!m_fileEndSent && (m_fileCommandIndex < m_currentModel->rowCount()) && !holding)
@@ -891,7 +903,7 @@ void frmMain::ProcessGRBL_ETH(QString data)
             m_statusReceived = true;
 
             // Update machine coordinates
-            static QRegExp mpx;
+            static QRegularExpression mpx;
             if(!m_settings->UseRotaryAxis())
             {
                 mpx.setPattern("MPos:([^,]*),([^,]*),([^,^>^|]*)");
@@ -900,25 +912,28 @@ void frmMain::ProcessGRBL_ETH(QString data)
             {
                 mpx.setPattern("MPos:([^,]*),([^,]*),([^,]*),([^,]*),([^,^>^|]*)");
             }
-            if(mpx.indexIn(data) != -1)
+            QRegularExpressionMatch match = mpx.match(data);
+            if(match.hasMatch())
             {
-                ui->txtMPosX->setText(mpx.cap(1));
-                ui->txtMPosY->setText(mpx.cap(2));
-                ui->txtMPosZ->setText(mpx.cap(3));
+                ui->txtMPosX->setText(match.captured(1));
+                ui->txtMPosY->setText(match.captured(2));
+                ui->txtMPosZ->setText(match.captured(3));
             }
             if(m_settings->UseRotaryAxis())
             {
                 // Set A & B
-                //qDebug() << "A: " << mpx.cap(4);
-                ui->txtMPosA->setText(mpx.cap(4));
-                ui->txtMPosB->setText(mpx.cap(5));
+                //qDebug() << "A: " << match.captured(4);
+                ui->txtMPosA->setText(match.captured(4));
+                ui->txtMPosB->setText(match.captured(5));
             }
 
             // Status
-            static QRegExp stx("<([^,^>^|]*)");
-            if (stx.indexIn(data) != -1)
+            static const QRegularExpression stx("<([^,^>^|]*)");
+
+            match = stx.match(data);
+            if (match.hasMatch())
             {
-                status = m_status.indexOf(stx.cap(1));
+                status = m_status.indexOf(match.captured(1));
 
                 // Undetermined status
                 if (status == -1) status = 0;
@@ -1046,7 +1061,7 @@ void frmMain::ProcessGRBL_ETH(QString data)
             // Store work offset
             static QVector3D workOffset;
             static double workOffsetAB[2] = {0.0};
-            static QRegExp wpx;
+            static QRegularExpression wpx;
 
             if(!m_settings->UseRotaryAxis())
             {
@@ -1057,15 +1072,16 @@ void frmMain::ProcessGRBL_ETH(QString data)
                 wpx.setPattern("WCO:([^,]*),([^,]*),([^,]*),([^,]*),([^,^>^|]*)");
             }
 
-            if(wpx.indexIn(data) != -1)
+            match = wpx.match(data);
+            if(match.hasMatch())
             {
-                workOffset = QVector3D(wpx.cap(1).toDouble(), wpx.cap(2).toDouble(), wpx.cap(3).toDouble());
+                workOffset = QVector3D(match.captured(1).toDouble(), match.captured(2).toDouble(), match.captured(3).toDouble());
 
                 // Store offsets for rotary axis
                 if(m_settings->UseRotaryAxis())
                 {
-                    workOffsetAB[0] = wpx.cap(4).toDouble();
-                    workOffsetAB[1] = wpx.cap(5).toDouble();
+                    workOffsetAB[0] = match.captured(4).toDouble();
+                    workOffsetAB[1] = match.captured(5).toDouble();
                 }
             }
 
@@ -1131,13 +1147,15 @@ void frmMain::ProcessGRBL_ETH(QString data)
             }
 
             // Get overridings
-            static QRegExp ov("Ov:([^,]*),([^,]*),([^,^>^|]*)");
-            if(ov.indexIn(data) != -1)
-            {
-                UpdateOverride(ui->slbFeedOverride, ov.cap(1).toInt(), 0x91);
-                UpdateOverride(ui->slbSpindleOverride, ov.cap(3).toInt(), 0x9a);
+            static const QRegularExpression ov("Ov:([^,]*),([^,]*),([^,^>^|]*)");
+            match = ov.match(data);
 
-                int rapid = ov.cap(2).toInt();
+            if(match.hasMatch())
+            {
+                UpdateOverride(ui->slbFeedOverride, match.captured(1).toInt(), 0x91);
+                UpdateOverride(ui->slbSpindleOverride, match.captured(3).toInt(), 0x9a);
+
+                int rapid = match.captured(2).toInt();
                 ui->slbRapidOverride->setCurrentValue(rapid);
 
                 int target = ui->slbRapidOverride->isChecked() ? ui->slbRapidOverride->value() : 100;
@@ -1192,17 +1210,19 @@ void frmMain::ProcessGRBL_ETH(QString data)
 
                 // Update pins state
                 QString pinState;
-                static QRegExp pn("Pn:([^|^>]*)");
-                if(pn.indexIn(data) != -1)
+                static const QRegularExpression pn("Pn:([^|^>]*)");
+                match = pn.match(data);
+                if(match.hasMatch())
                 {
-                    pinState.append(QString(tr("PS: %1")).arg(pn.cap(1)));
+                    pinState.append(QString(tr("PS: %1")).arg(match.captured(1)));
                 }
 
                 // Process spindle state
-                static QRegExp as("A:([^,^>^|]+)");
-                if(as.indexIn(data) != -1)
+                static const QRegularExpression as("A:([^,^>^|]+)");
+                match = as.match(data);
+                if(match.hasMatch())
                 {
-                    QString state = as.cap(1);
+                    QString state = match.captured(1);
                     m_spindleCW = state.contains("S");
 
                     if(state.contains("S") || state.contains("C"))
@@ -1221,7 +1241,7 @@ void frmMain::ProcessGRBL_ETH(QString data)
                         pinState.append(" / ");
                     }
 
-                    pinState.append(QString(tr("AS: %1")).arg(as.cap(1)));
+                    pinState.append(QString(tr("AS: %1")).arg(match.captured(1)));
                 }
                 else
                 {
@@ -1233,10 +1253,11 @@ void frmMain::ProcessGRBL_ETH(QString data)
             }
 
             // Get feed/spindle values
-            static QRegExp fs("FS:([^,]*),([^,^|^>]*)");
-            if(fs.indexIn(data) != -1)
+            static const QRegularExpression fs("FS:([^,]*),([^,^|^>]*)");
+            match = fs.match(data);
+            if(match.hasMatch())
             {
-                ui->glwVisualizer->setSpeedState((QString(tr("F/S: %1 / %2")).arg(fs.cap(1)).arg(fs.cap(2))));
+                ui->glwVisualizer->setSpeedState((QString(tr("F/S: %1 / %2")).arg(match.captured(1)).arg(match.captured(2))));
             }
 
         }
@@ -1322,10 +1343,11 @@ void frmMain::ProcessGRBL_ETH(QString data)
                         ui->glwVisualizer->setParserStatus(response.left(response.indexOf("; ")));
 
                         // Spindle speed
-                        QRegExp rx(".*S([\\d\\.]+)");
-                        if(rx.indexIn(response) != -1)
+                        static const QRegularExpression rx(".*S([\\d\\.]+)");
+                        QRegularExpressionMatch match = rx.match(response);
+                        if(match.hasMatch())
                         {
-                            double speed = toMetric(rx.cap(1).toDouble()); //RPM in imperial?
+                            double speed = toMetric(match.captured(1).toDouble()); //RPM in imperial?
                             ui->slbSpindle->setCurrentValue(speed);
                         }
                     }
@@ -1346,10 +1368,11 @@ void frmMain::ProcessGRBL_ETH(QString data)
                             storeParserState();
 
                         // Spindle speed
-                        QRegExp rx(".*S([\\d\\.]+)");
-                        if(rx.indexIn(response) != -1)
+                        static const QRegularExpression rx(".*S([\\d\\.]+)");
+                        QRegularExpressionMatch match = rx.match(response);
+                        if(match.hasMatch())
                         {
-                            double speed = toMetric(rx.cap(1).toDouble()); //RPM in imperial?
+                            double speed = toMetric(match.captured(1).toDouble()); //RPM in imperial?
                             ui->slbSpindle->setCurrentValue(speed);
                         }
                     }
@@ -1358,24 +1381,25 @@ void frmMain::ProcessGRBL_ETH(QString data)
                     if(ca.command == "$#" && ca.tableIndex == -2)
                     {
                         qDebug() << "Received offsets:" << response;
-                        QRegExp rx(".*G92:([^,]*),([^,]*),([^\\]]*)");
+                        static const QRegularExpression rx(".*G92:([^,]*),([^,]*),([^\\]]*)");
 
-                        if(rx.indexIn(response) != -1)
+                        QRegularExpressionMatch match = rx.match(response);
+                        if(match.hasMatch())
                         {
                             if(m_settingZeroX)
                             {
                                 m_settingZeroX = false;
-                                m_storedX = toMetric(rx.cap(1).toDouble());
+                                m_storedX = toMetric(match.captured(1).toDouble());
                             }
                             else if(m_settingZeroXY)
                             {
                                 m_settingZeroXY = false;
-                                m_storedY = toMetric(rx.cap(2).toDouble());
+                                m_storedY = toMetric(match.captured(2).toDouble());
                             }
                             else if(m_settingZeroZ)
                             {
                                 m_settingZeroZ = false;
-                                m_storedZ = toMetric(rx.cap(3).toDouble());
+                                m_storedZ = toMetric(match.captured(3).toDouble());
                             }
 
                             ui->cmdRestoreOrigin->setToolTip(QString(tr("Restore origin: %1, %2, %3\n")).arg(m_storedX).arg(m_storedY).arg(m_storedZ));
@@ -1408,12 +1432,13 @@ void frmMain::ProcessGRBL_ETH(QString data)
                     {
                         // Get probe Z coordinate
                         // "[PRB:0.000,0.000,0.000:0];ok"
-                        QRegExp rx(".*PRB:([^,]*),([^,]*),([^,:\\]]*)");
+                        static const QRegularExpression rx(".*PRB:([^,]*),([^,]*),([^,:\\]]*)");
                         double z = qQNaN();
-                        if(rx.indexIn(response) != -1)
+                        QRegularExpressionMatch match = rx.match(response);
+                        if(match.hasMatch())
                         {
-                            qDebug() << "probing coordinates:" << rx.cap(1) << rx.cap(2) << rx.cap(3);
-                            z = toMetric(rx.cap(3).toDouble());
+                            qDebug() << "probing coordinates:" << match.captured(1) << match.captured(2) << match.captured(3);
+                            z = toMetric(match.captured(3).toDouble());
                         }
 
                         static double firstZ;
@@ -1443,7 +1468,7 @@ void frmMain::ProcessGRBL_ETH(QString data)
                     }
 
                     // Change state query time on check mode on
-                    if(ca.command.contains(QRegExp("$[cC]")))
+                    if(ca.command.contains(QRegularExpression("$[cC]")))
                     {
                         m_timerStateQuery.setInterval(response.contains("Enable") ? 1000 : m_settings->queryStateTime());
                     }
@@ -1565,7 +1590,7 @@ void frmMain::ProcessGRBL_ETH(QString data)
                         }
 
                         // Check transfer complete (last row always blank, last command row = rowcount - 2)
-                        if(m_fileProcessedCommandIndex == m_currentModel->rowCount() - 2 || ca.command.contains(QRegExp("M0*2|M30")))
+                        if(m_fileProcessedCommandIndex == m_currentModel->rowCount() - 2 || ca.command.contains(QRegularExpression("M0*2|M30")))
                             m_transferCompleted = true;
                         // Send next program commands
                         else if (!m_fileEndSent && (m_fileCommandIndex < m_currentModel->rowCount()) && !holding)
